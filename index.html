@@ -70,16 +70,16 @@
             
             blinkEffect: {
                 duration: 360,
-                frequency: 30,
+                frequency: 24,
             },
             transitionEffect: {
                 duration: 100,
-                amplitude: { x: 4, y: 3 },
+                amplitude: { x: 4, y: 2 },
                 frequency: 10,
             },
             preFadeoutVibration: {
                 duration: 110, // 消える直前の何秒間振動するか(ms)
-                amplitude: { x: 3, y: 2 } // 振幅(px)
+                amplitude: { x: 3, y: 1.5 } // 振幅(px)
             },
             gridBorderWidth: '0.75px',
             gridBorderColor: '#666666',
@@ -121,10 +121,10 @@
             
             iconBox: {
                 containerWidth: '540px',
-                boxSize: { width: '64px', height: '80px' },
+                boxSize: { width: '60px', height: '70px' },
                 gap: '2px',
-                iconSize: '62px',
-                textSize: '12px',
+                iconSize: '52px',
+                textSize: '11px',
                 textColor: '#ffffff'
             },
             iconBoxSets: [
@@ -282,8 +282,8 @@
                     gridElement.className = 'grid shrink-0';
                     gridElement.style.gridTemplateColumns = 'repeat(5, 1fr)';
                     gridElement.style.border = `${CONFIG.gridBorderWidth} solid ${CONFIG.gridBorderColor}`;
-                    gridElement.style.width = '170px';
-                    gridElement.style.height = '170px';
+                    gridElement.style.width = '160px';
+                    gridElement.style.height = '160px';
                     gridData.flat().forEach(char => {
                         const cell = document.createElement('div');
                         cell.className = 'grid-cell flex items-center justify-center text-lg cursor-pointer transition-colors duration-200';
@@ -343,4 +343,5 @@
         });
     </script>
 </body>
+
 </html>
