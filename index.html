@@ -121,10 +121,10 @@
             
             iconBox: {
                 containerWidth: '540px',
-                boxSize: { width: '60px', height: '70px' },
-                gap: '2px',
-                iconSize: '52px',
-                textSize: '11px',
+                boxSize: { width: '54px', height: '70px' },
+                gap: '4px',
+                iconSize: '50px',
+                textSize: '9px',
                 textColor: '#ffffff'
             },
             iconBoxSets: [
@@ -282,8 +282,8 @@
                     gridElement.className = 'grid shrink-0';
                     gridElement.style.gridTemplateColumns = 'repeat(5, 1fr)';
                     gridElement.style.border = `${CONFIG.gridBorderWidth} solid ${CONFIG.gridBorderColor}`;
-                    gridElement.style.width = '160px';
-                    gridElement.style.height = '160px';
+                    gridElement.style.width = '150px';
+                    gridElement.style.height = '150px';
                     gridData.flat().forEach(char => {
                         const cell = document.createElement('div');
                         cell.className = 'grid-cell flex items-center justify-center text-lg cursor-pointer transition-colors duration-200';
@@ -345,3 +345,4 @@
 </body>
 
 </html>
+
