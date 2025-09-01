@@ -40,10 +40,10 @@
         }
         
         #scroll-wrapper {
-            max-height: calc(100vh - 112px - 20px);
+            max-height: calc(100vh - 112px - 60px);
             overflow-y: auto;
             padding-right: 16px;
-            padding-bottom: 20px;
+            padding-bottom: 60px;
         }
     </style>
 </head>
@@ -282,8 +282,8 @@
                     gridElement.className = 'grid shrink-0';
                     gridElement.style.gridTemplateColumns = 'repeat(5, 1fr)';
                     gridElement.style.border = `${CONFIG.gridBorderWidth} solid ${CONFIG.gridBorderColor}`;
-                    gridElement.style.width = '150px';
-                    gridElement.style.height = '150px';
+                    gridElement.style.width = '146px';
+                    gridElement.style.height = '146px';
                     gridData.flat().forEach(char => {
                         const cell = document.createElement('div');
                         cell.className = 'grid-cell flex items-center justify-center text-lg cursor-pointer transition-colors duration-200';
@@ -345,5 +345,6 @@
 </body>
 
 </html>
+
 
 
