@@ -1,353 +1,395 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>最終問題</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- 変更点: フォント読み込みの記述を追加（表示速度の最適化のため） -->
-    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c&family=Noto+Serif+JP&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'M PLUS Rounded 1c', sans-serif;
-            background-color: #f0f4f8;
-        }
-        #initial-text {
-            font-family: 'Noto Serif JP', serif;
-        }
-        .main-content-fade-in {
-            animation: fade-in 1.5s ease-out forwards;
-        }
-        @keyframes fade-in {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        .animate-shrink-move-up {
-            animation-name: shrink-move-up-kf;
-            animation-fill-mode: forwards;
-            animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        @keyframes shrink-move-up-kf {
-            to {
-                transform: translateY(var(--final-y)) scale(0.5);
-            }
-        }
-        .grid-cell {
-            font-family: 'Noto Serif JP', serif;
-            font-weight: 400;
-            box-sizing: border-box;
-            user-select: none;
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>最終問題 — 色収差改善版</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c&family=Noto+Serif+JP&display=swap" rel="stylesheet">
+<style>
+:root{
+  --vignette-opacity: 0.45;
+  --vignette-size: 60%;
+  --noise-opacity: 0.12;
+}
+html,body{height:100%;margin:0;padding:0;}
+body {
+  font-family:'M PLUS Rounded 1c',sans-serif;
+  background-color:#888888;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  overflow:hidden;
+}
+
+/* initial text container */
+#initial-text-container {
+  position: fixed;
+  inset:0;
+  z-index:20;
+  pointer-events:auto;
+}
+/* すべてのテキスト要素に共通のスタイル */
+.text-element {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-family:'Noto Serif JP', serif;
+  will-change: transform, opacity;
+  transform-origin: center;
+}
+.additive-layer {
+  mix-blend-mode: plus-lighter;
+}
+
+/* main content */
+.main-content-fade-in { animation: fade-in 1.2s ease-out forwards; }
+@keyframes fade-in { from{opacity:0} to{opacity:1} }
+
+.grid-cell { font-family: 'Noto Serif JP', serif; font-weight:400; box-sizing:border-box; user-select:none; }
+#scroll-wrapper { max-height: calc(100vh - 112px); overflow-y:auto; padding-right:16px; padding-bottom:60px; }
+
+/* overlays */
+#effects-root { position: fixed; inset: 0; pointer-events: none; z-index: 18; }
+
+/* vignette */
+#vignette { position:absolute; inset:0; pointer-events:none; z-index:19; transition:opacity 200ms linear; background: radial-gradient(circle at center, rgba(0,0,0,0) calc(var(--vignette-size,60%) - 2%), rgba(0,0,0,var(--vignette-opacity,0.45)) 100%); mix-blend-mode:multiply; }
+
+/* noise */
+#noise-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; opacity: var(--noise-opacity,0); transition:opacity 200ms linear; mix-blend-mode: overlay; z-index:20; }
+
+main#main-content { z-index: 10; position: relative; }
+.grid-cell.toggled { box-shadow: 0 0 10px rgba(255,255,255,0.06) inset; }
+</style>
+
+</head>
+<body>
+  <div id="effects-root" aria-hidden="true">
+    <canvas id="noise-canvas"></canvas>
+    <div id="vignette"></div>
+  </div>
+
+  <div id="initial-text-container">
+    <h1 id="text-glow" class="text-element text-4xl md:text-6xl font-bold whitespace-nowrap" style="opacity:0;"></h1>
+    <h1 id="text-red" class="text-element additive-layer text-4xl md:text-6xl font-bold whitespace-nowrap" style="color:#ff0000; opacity:0;"></h1>
+    <h1 id="text-green" class="text-element additive-layer text-4xl md:text-6xl font-bold whitespace-nowrap" style="color:#00ff00; opacity:0;"></h1>
+    <h1 id="text-blue" class="text-element additive-layer text-4xl md:text-6xl font-bold whitespace-nowrap" style="color:#0000ff; opacity:0;"></h1>
+  </div>
+
+  <main id="main-content" class="w-full h-screen pt-28 flex justify-center opacity-0 relative">
+    <div id="scroll-wrapper">
+      <div id="grid-container" class="w-full max-w-4xl mx-auto flex flex-col space-y-4"></div>
+    </div>
+    <div id="bottom-gradient" class="absolute bottom-0 left-0 right-0 h-[20px] z-10 pointer-events-none"></div>
+  </main>
+
+<script>
+/* ========== CONFIG（内部変数） ========== */
+const CONFIG = {
+  backgroundColor: '#1f2224',
+
+  initialTextAmplitude: 0.4,
+  initialTextInitialSize: 0.5,
+  initialTextGrowthRate: 0.1,
+  initialTextMoveDuration: 1000,
+  titleTextDurations: [3500,1500],
+  initialTextContents: ["（ストーリー的な内容をここに入力）","謎3: 最終問題「」"],
+
+  gridBorderWidth: '0.75px',
+  gridBorderColor: '#666666',
+  gridCellColorInitial: '#222222',
+  gridTextColorInitial: '#ffffff',
+  gridCellColorToggled: '#dddddd',
+  gridTextColorToggled: '#000000',
+  gridCharacters: [
+    [['け','み','き','や','こ'],['と','し','よ','か','ん'],['ぬ','そ','う','り','た'],['ら','い','と','ん','ぼ'],['み','え','ふ','く','り']],
+    [['さ','さ','た','ろ','う'],['そ','ぬ','ひ','ま','で'],['す','い','か','ー','ど'],['か','せ','ち','り','け'],['す','べ','り','だ','い']],
+    [['ら','ふ','お','ほ','け'],['こ','い','の','ぼ','り'],['ま','よ','な','ち','ん'],['も','さ','ふ','け','ご'],['れ','や','ほ','し','い']],
+    [['よ','み','か','づ','き'],['や','せ','こ','ら','ゆ'],['て','ん','た','こ','う'],['す','ま','く','に','り'],['し','ふ','い','か','と']],
+    [['ら','か','み','な','り'],['せ','ね','ま','く','も'],['き','よ','な','る','こ'],['れ','み','ぐ','て','ん'],['か','や','く','ち','ほ']]
+  ],
+
+  iconBox: {
+    containerWidth: '540px',
+    boxSize: { width:'54px', height:'60px' },
+    gap: '4px',
+    iconSize: '46px',
+    textSize: '9px',
+    textColor: '#ffffff'
+  },
+  iconBoxSets: [
+    [{ iconUrl: 'images/kyoto.png', text: '◯。◯◯◯' }, { iconUrl: 'images/library.png', text: '◯◯。◯◯' }, { iconUrl: 'images/light.png', text: '◯◯◯' }, { iconUrl: 'images/dragonfly.png', text: '◯◯◯' }],
+    [{ iconUrl: 'images/slider.png', text: '◯◯◯◯◯' }, { iconUrl: 'images/card.png', text: '◯◯◯' }, { iconUrl: 'images/watch.png', text: '◯◯◯◯◯' }, { iconUrl: 'images/watermelon.png', text: '◯◯◯' }, { iconUrl: 'images/sasataro.png', text: '◯◯◯◯◯' }],
+    [{ iconUrl: 'images/koma.png', text: '◯◯' }, { iconUrl: 'images/koinobori.png', text: '◯◯◯◯◯' }, { iconUrl: 'images/apple.png', text: '◯◯◯' }, { iconUrl: 'images/axe.png', text: '◯◯' }, { iconUrl: 'images/star.png', text: '◯◯' }],
+    [{ iconUrl: 'images/cucumber.png', text: '◯。◯◯' }, { iconUrl: 'images/squid.png', text: '◯◯' }, { iconUrl: 'images/hand.png', text: '◯' }, { iconUrl: 'images/octopus.png', text: '◯◯' }, { iconUrl: 'images/store.png', text: '◯◯' }, { iconUrl: 'images/moon.png', text: '◯◯◯◯' }],
+    [{ iconUrl: 'images/tree.png', text: '◯' }, { iconUrl: 'images/mouth.png', text: '◯◯' }, { iconUrl: 'images/controller.png', text: '◯◯◯◯' }, { iconUrl: 'images/thunder.png', text: '◯◯◯◯' }, { iconUrl: 'images/money.png', text: '◯◯' }]
+  ],
+
+  effects: {
+    mobileDisableByDefault: true,
+    vignette: { enabled:true, opacity:0.3, sizePct:40 },
+    chroma: {
+      enabled: true,
+      offsetPx: 1,
+      angleDeg: 0,
+      opacity: 1,
+    },
+    glow: { enabled:true, color:'#ffffff', blurPx:64, intensity:0.8 },
+    noise: { enabled:true, opacity:0.1, strength:1.0, lowResFactor:0.25, animated:true, fpsLimit:10 },
+  }
+};
+
+function hexToRgb(hex) {
+  const c = hex.replace('#','');
+  if (c.length === 3) return { r: parseInt(c[0]+c[0],16), g: parseInt(c[1]+c[1],16), b: parseInt(c[2]+c[2],16) };
+  return { r: parseInt(c.slice(0,2),16), g: parseInt(c.slice(2,4),16), b: parseInt(c.slice(4,6),16) };
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const body = document.body;
+  const mainContentEl = document.getElementById('main-content');
+  const bottomGradientEl = document.getElementById('bottom-gradient');
+  const vignetteEl = document.getElementById('vignette');
+  const noiseCanvas = document.getElementById('noise-canvas');
+  const initialTextContainer = document.getElementById('initial-text-container');
+
+  const glowEl = document.getElementById('text-glow');
+  const redEl = document.getElementById('text-red');
+  const greenEl = document.getElementById('text-green');
+  const blueEl = document.getElementById('text-blue');
+  const allTextElements = [glowEl, redEl, greenEl, blueEl];
+
+  body.style.backgroundColor = CONFIG.backgroundColor;
+  bottomGradientEl.style.background = `linear-gradient(to top, ${CONFIG.backgroundColor}, transparent)`;
+
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile && CONFIG.effects.mobileDisableByDefault) {
+    CONFIG.effects.chroma.enabled = false;
+    CONFIG.effects.noise.enabled = false;
+  }
+
+  function computeOffset() {
+    const c = CONFIG.effects.chroma;
+    const offset = Math.max(0, Number(c.offsetPx) || 0);
+    const angle = ((Number(c.angleDeg) || 0) * Math.PI) / 180;
+    return { ox: Math.cos(angle) * offset, oy: Math.sin(angle) * offset };
+  }
+
+  function updateVignette() {
+    const v = CONFIG.effects.vignette;
+    vignetteEl.style.opacity = v.enabled ? '1' : '0';
+    vignetteEl.style.background = `radial-gradient(circle at center, rgba(0,0,0,0) calc(${v.sizePct}% - 2%), rgba(0,0,0,${v.opacity}) 100%)`;
+  }
+
+  function updateGlow() {
+    const g = CONFIG.effects.glow;
+    if (glowEl) {
+        glowEl.style.display = g.enabled ? 'block' : 'none';
+        glowEl.style.color = g.color;
+        glowEl.style.filter = `blur(${g.blurPx}px)`;
+        glowEl.style.opacity = String(g.intensity);
+    }
+  }
+
+  let noiseRAF = null, lastNoiseTime = 0;
+  function resizeNoiseCanvas() {
+    const rect = noiseCanvas.getBoundingClientRect();
+    const factor = CONFIG.effects.noise.lowResFactor || 0.25;
+    noiseCanvas.width = Math.max(1, Math.floor(rect.width * factor));
+    noiseCanvas.height = Math.max(1, Math.floor(rect.height * factor));
+  }
+  function drawNoiseFrame(now) {
+    const cfg = CONFIG.effects.noise;
+    if (!cfg.enabled) { noiseCanvas.style.opacity = '0'; return; }
+    const ctx = noiseCanvas.getContext('2d');
+    if (!ctx) return;
+    const fpsLimit = Math.max(8, Math.min(60, cfg.fpsLimit || 30));
+    if (now - lastNoiseTime < (1000 / fpsLimit)) {
+      noiseRAF = requestAnimationFrame(drawNoiseFrame); return;
+    }
+    lastNoiseTime = now;
+    const w = noiseCanvas.width, h = noiseCanvas.height, id = ctx.createImageData(w, h), d = id.data, strength = cfg.strength || 1.0;
+    for (let i=0;i<d.length;i+=4){ const v = (Math.random()*255)*strength; d[i]=d[i+1]=d[i+2]=v; d[i+3]=20 + Math.random()*60; }
+    ctx.putImageData(id,0,0);
+    noiseRAF = requestAnimationFrame(drawNoiseFrame);
+  }
+  function startNoise() { if (noiseRAF) cancelAnimationFrame(noiseRAF); resizeNoiseCanvas(); lastNoiseTime = 0; noiseRAF = requestAnimationFrame(drawNoiseFrame); }
+  function cancelNoise() { if (noiseRAF) { cancelAnimationFrame(noiseRAF); noiseRAF = null; } }
+  function updateNoise() {
+    const n = CONFIG.effects.noise;
+    noiseCanvas.style.opacity = n.enabled ? String(n.opacity) : '0';
+    if (n.enabled) startNoise(); else cancelNoise();
+  }
+
+  function updateAllEffects() {
+    updateVignette();
+    updateGlow();
+    updateNoise();
+    if (redEl) {
+      const display = CONFIG.effects.chroma.enabled ? 'block' : 'none';
+      redEl.style.display = greenEl.style.display = blueEl.style.display = display;
+    }
+  }
+
+  function createMainContent() {
+    const container = document.getElementById('grid-container');
+    container.innerHTML = '';
+    CONFIG.gridCharacters.forEach((gridData, index) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flex items-center space-x-8 pl-8';
+      const gridElement = document.createElement('div');
+      gridElement.className = 'grid shrink-0';
+      gridElement.style.cssText = `grid-template-columns:repeat(5,1fr); border:${CONFIG.gridBorderWidth} solid ${CONFIG.gridBorderColor}; width:146px; height:146px;`;
+      gridData.flat().forEach(char => {
+        const cell = document.createElement('div');
+        cell.className = 'grid-cell flex items-center justify-center text-lg cursor-pointer transition-colors duration-200';
+        cell.textContent = char;
+        cell.style.cssText = `border:${CONFIG.gridBorderWidth} solid ${CONFIG.gridBorderColor}; background-color:${CONFIG.gridCellColorInitial}; color:${CONFIG.gridTextColorInitial};`;
+        cell.dataset.toggled = 'false';
+        gridElement.appendChild(cell);
+      });
+      const iconBoxContainer = document.createElement('div');
+      iconBoxContainer.className = 'flex flex-wrap';
+      iconBoxContainer.style.cssText = `gap:${CONFIG.iconBox.gap}; width:${CONFIG.iconBox.containerWidth};`;
+      const boxSet = CONFIG.iconBoxSets[index] || [];
+      boxSet.forEach(boxData => {
+        const box = document.createElement('div');
+        box.className = 'flex flex-col items-center justify-center rounded-md';
+        box.style.cssText = `width:${CONFIG.iconBox.boxSize.width}; height:${CONFIG.iconBox.boxSize.height};`;
+        const icon = document.createElement('img');
+        icon.src = boxData.iconUrl;
+        icon.style.cssText = `width:${CONFIG.iconBox.iconSize}; height:${CONFIG.iconBox.iconSize}; margin-bottom:4px;`;
+        icon.onerror = () => { icon.src = `https.placehold.co/${CONFIG.iconBox.iconSize.replace('px','')}?text=?`; };
+        const text = document.createElement('span');
+        text.textContent = boxData.text;
+        text.style.cssText = `font-size:${CONFIG.iconBox.textSize}; color:${CONFIG.iconBox.textColor};`;
+        box.appendChild(icon); box.appendChild(text); iconBoxContainer.appendChild(box);
+      });
+      wrapper.appendChild(gridElement); wrapper.appendChild(iconBoxContainer); container.appendChild(wrapper);
+    });
+    container.addEventListener('click', (event) => {
+      const cell = event.target.closest('.grid-cell');
+      if (!cell) return;
+      const isToggled = cell.dataset.toggled === 'true';
+      cell.style.backgroundColor = isToggled ? CONFIG.gridCellColorInitial : CONFIG.gridCellColorToggled;
+      cell.style.color = isToggled ? CONFIG.gridTextColorInitial : CONFIG.gridTextColorToggled;
+      cell.dataset.toggled = String(!isToggled);
+      cell.classList.toggle('toggled', !isToggled);
+    });
+  }
+
+  async function runAnimationSequence() {
+    const STATES = { BLINK:0, NORMAL_1:1, TRANSITION:2, NORMAL_2:3, END:4 };
+    let currentState = STATES.BLINK;
+    let totalStartTime = performance.now(), stateStartTime = performance.now();
+    const text1Duration = CONFIG.titleTextDurations[0], text2Duration = CONFIG.titleTextDurations[1];
+    const blinkDuration = 360, transitionDuration = 100;
+    let textSwitched = false;
+
+    allTextElements.forEach(el => el.textContent = CONFIG.initialTextContents[0]);
+    updateGlow();
+
+    function animationLoop(timestamp) {
+      const totalElapsed = timestamp - totalStartTime, stateElapsed = timestamp - stateStartTime;
+      let vibX=0, vibY=0, transVibX=0, transVibY=0, preVibX=0, preVibY=0, scale=0, opacity=1;
+
+      const scalingProgress = Math.min(totalElapsed / (text1Duration + transitionDuration + text2Duration), 1);
+      scale = CONFIG.initialTextInitialSize + (CONFIG.initialTextGrowthRate * scalingProgress);
+      const amp = CONFIG.initialTextAmplitude;
+
+      switch (currentState) {
+        case STATES.BLINK:
+          opacity = Math.floor(stateElapsed / (1000/24)) % 2 === 0 ? 0 : 1;
+          vibX = (Math.random()-0.5) * 2 * amp; vibY = (Math.random()-0.5) * 2 * amp;
+          if (stateElapsed > blinkDuration) { currentState = STATES.NORMAL_1; stateStartTime = timestamp; }
+          break;
+        case STATES.NORMAL_1:
+          vibX = (Math.random()-0.5) * 2 * amp; vibY = (Math.random()-0.5) * 2 * amp;
+          if (stateElapsed > (text1Duration - blinkDuration) - 110) { preVibX = (Math.random()-0.5) * 6; preVibY = (Math.random()-0.5) * 3; }
+          if (stateElapsed > text1Duration - blinkDuration) { currentState = STATES.TRANSITION; stateStartTime = timestamp; }
+          break;
+        case STATES.TRANSITION:
+          if (!textSwitched && stateElapsed > transitionDuration / 2) {
+            allTextElements.forEach(el => el.textContent = CONFIG.initialTextContents[1]);
+            textSwitched = true;
+          }
+          vibX = (Math.random()-0.5) * 2 * amp; vibY = (Math.random()-0.5) * 2 * amp;
+          transVibX = (Math.random()-0.5) * 8; transVibY = (Math.random()-0.5) * 4;
+          if (stateElapsed > transitionDuration) { currentState = STATES.NORMAL_2; stateStartTime = timestamp; }
+          break;
+        case STATES.NORMAL_2:
+          vibX = (Math.random()-0.5) * 2 * amp; vibY = (Math.random()-0.5) * 2 * amp;
+          if (stateElapsed > text2Duration - 1000) { const damp = 1-((stateElapsed-(text2Duration-1000))/1000); vibX *= damp; vibY *= damp; }
+          if (stateElapsed > text2Duration) { currentState = STATES.END; }
+          break;
+      }
+
+      const finalVibX = vibX+transVibX+preVibX, finalVibY = vibY+transVibY+preVibY;
+      const animTransform = `translate(${finalVibX}px, ${finalVibY}px) scale(${scale})`;
+      
+      const mainTransform = `translate(-50%, -50%) ${animTransform}`;
+      const chromaOpacity = String(opacity * CONFIG.effects.chroma.opacity);
+      
+      greenEl.style.opacity = chromaOpacity;
+      greenEl.style.transform = mainTransform;
+      glowEl.style.transform = mainTransform;
+
+      if (CONFIG.effects.chroma.enabled) {
+        const { ox, oy } = computeOffset();
+        redEl.style.opacity = chromaOpacity;
+        blueEl.style.opacity = chromaOpacity;
+        redEl.style.transform = `translate(calc(-50% + ${finalVibX - ox}px), calc(-50% + ${finalVibY - oy}px)) scale(${scale})`;
+        blueEl.style.transform = `translate(calc(-50% + ${finalVibX + ox}px), calc(-50% + ${finalVibY + oy}px)) scale(${scale})`;
+      }
+
+      if (currentState !== STATES.END) {
+        requestAnimationFrame(animationLoop);
+      } else {
+        const finalMoveOptions = { duration: CONFIG.initialTextMoveDuration, easing: 'cubic-bezier(0.22,0.9,0.35,1)', fill: 'forwards' };
+        
+        const mainTargetTransform = `translate(-50%, calc(-50% - 42vh)) scale(0.5)`;
+        
+        const mainAnim = greenEl.animate([{ opacity: CONFIG.effects.chroma.opacity, transform: mainTargetTransform }], finalMoveOptions);
+        
+        mainAnim.onfinish = () => {
+          initialTextContainer.style.pointerEvents = 'none';
+        };
+
+        glowEl.animate([{ transform: mainTargetTransform }], finalMoveOptions);
+
+        if (CONFIG.effects.chroma.enabled) {
+            const { ox, oy } = computeOffset();
+            const chromaOpacity = CONFIG.effects.chroma.opacity;
+            const redTargetTransform = `translate(calc(-50% - ${ox}px), calc(-50% - 42vh - ${oy}px)) scale(0.5)`;
+            const blueTargetTransform = `translate(calc(-50% + ${ox}px), calc(-50% - 42vh + ${oy}px)) scale(0.5)`;
+            
+            redEl.animate([{ opacity: chromaOpacity, transform: redTargetTransform }], finalMoveOptions);
+            blueEl.animate([{ opacity: chromaOpacity, transform: blueTargetTransform }], finalMoveOptions);
         }
         
-        #scroll-wrapper {
-            /* 変更点: calcの計算式から不要な -60px を削除 */
-            max-height: calc(100vh - 112px);
-            overflow-y: auto;
-            padding-right: 16px;
-            padding-bottom: 60px;
-        }
-    </style>
-</head>
-<body class="overflow-hidden">
-    <div id="initial-text-container" class="fixed inset-0 flex items-center justify-center z-20">
-        <h1 id="initial-text" class="text-4xl md:text-6xl font-bold whitespace-nowrap" style="transform-origin: center; opacity: 0;"></h1>
-    </div>
-    <main id="main-content" class="w-full h-screen pt-28 flex justify-center opacity-0 relative">
-        <div id="scroll-wrapper">
-             <div id="grid-container" class="w-full max-w-4xl mx-auto flex flex-col space-y-4"></div>
-        </div>
-        <div id="bottom-gradient" class="absolute bottom-0 left-0 right-0 h-[20px] z-10 pointer-events-none"></div>
-    </main>
-    <script>
-        const CONFIG = {
-            backgroundColor: '#222222',
-            initialTextColor: '#ffffff',
-            initialTextAmplitude: 0.4,
-            initialTextInitialSize: 0.5,
-            initialTextGrowthRate: 0.1,
-            initialTextMoveDuration: 1000,
-            titleTextDurations: [3500, 1500],
-            initialTextContents: ["（ストーリー的な内容をここに入力）", "謎3: 最終問題「」"],
-            
-            blinkEffect: {
-                duration: 360,
-                frequency: 24,
-            },
-            transitionEffect: {
-                duration: 100,
-                amplitude: { x: 4, y: 2 },
-                frequency: 10,
-            },
-            preFadeoutVibration: {
-                duration: 110, // 消える直前の何秒間振動するか(ms)
-                amplitude: { x: 3, y: 1.5 } // 振幅(px)
-            },
-            gridBorderWidth: '0.75px',
-            gridBorderColor: '#666666',
-            gridCellColorInitial: '#222222',
-            gridTextColorInitial: '#ffffff',
-            gridCellColorToggled: '#dddddd',
-            gridTextColorToggled: '#000000',
-            gridCharacters: [
-                [['け','み','き','や','こ'],
-                ['と','し','よ','か','ん'],
-                ['ぬ','そ','う','り','た'],
-                ['ら','い','と','ん','ぼ'],
-                ['み','え','ふ','く','り']],
-                
-                [['さ','さ','た','ろ','う'],
-                ['そ','ぬ','ひ','ま','で'],
-                ['す','い','か','ー','ど'],
-                ['か','せ','ち','り','け'],
-                ['す','べ','り','だ','い']],
-                
-                [['ら','ふ','お','ほ','け'],
-                ['こ','い','の','ぼ','り'],
-                ['ま','よ','な','ち','ん'],
-                ['も','さ','ふ','け','ご'],
-                ['れ','や','ほ','し','い']],
-                
-                [['よ','み','か','づ','き'],
-                ['や','せ','こ','ら','ゆ'],
-                ['て','ん','た','こ','う'],
-                ['す','ま','く','に','り'],
-                ['し','ふ','い','か','と']],
-                
-                [['ら','か','み','な','り'],
-                ['せ','ね','ま','く','も'],
-                ['き','よ','な','る','こ'],
-                ['れ','み','ぐ','て','ん'],
-                ['か','や','く','ち','ほ']]
-            ],
-            
-            iconBox: {
-                containerWidth: '540px',
-                boxSize: { width: '54px', height: '60px' },
-                gap: '4px',
-                iconSize: '46px',
-                textSize: '9px',
-                textColor: '#ffffff'
-            },
-            iconBoxSets: [
-                [{ iconUrl: 'images/kyoto.png', text: '◯。◯◯◯' },
-                { iconUrl: 'images/library.png', text: '◯◯。◯◯' },
-                { iconUrl: 'images/light.png', text: '◯◯◯' },
-                { iconUrl: 'images/dragonfly.png', text: '◯◯◯' }],
-                
-                [{ iconUrl: 'images/slider.png', text: '◯◯◯◯◯' },
-                { iconUrl: 'images/card.png', text: '◯◯◯' },
-                { iconUrl: 'images/watch.png', text: '◯◯◯◯◯' },
-                { iconUrl: 'images/watermelon.png', text: '◯◯◯' },
-                { iconUrl: 'images/sasataro.png', text: '◯◯◯◯◯' }],
-                
-                [{ iconUrl: 'images/koma.png', text: '◯◯' },
-                { iconUrl: 'images/koinobori.png', text: '◯◯◯◯◯' },
-                { iconUrl: 'images/apple.png', text: '◯◯◯' },
-                { iconUrl: 'images/axe.png', text: '◯◯' },
-                { iconUrl: 'images/star.png', text: '◯◯' }],
-                
-                [{ iconUrl: 'images/cucumber.png', text: '◯。◯◯' },
-                { iconUrl: 'images/squid.png', text: '◯◯' },
-                { iconUrl: 'images/hand.png', text: '◯' },
-                { iconUrl: 'images/octopus.png', text: '◯◯' },
-                { iconUrl: 'images/store.png', text: '◯◯' },
-                { iconUrl: 'images/moon.png', text: '◯◯◯◯' }],
-                
-                [{ iconUrl: 'images/tree.png', text: '◯' },
-                { iconUrl: 'images/mouth.png', text: '◯◯' },
-                { iconUrl: 'images/controller.png', text: '◯◯◯◯' },
-                { iconUrl: 'images/thunder.png', text: '◯◯◯◯' },
-                { iconUrl: 'images/money.png', text: '◯◯' }]
-            ]
-        };
-        // 変更点: async を追加して、関数内で await を使えるようにする
-        document.addEventListener('DOMContentLoaded', async () => {
-            const body = document.body;
-            const initialTextEl = document.getElementById('initial-text');
-            const initialTextContainer = document.getElementById('initial-text-container');
-            const mainContentEl = document.getElementById('main-content');
-            const bottomGradientEl = document.getElementById('bottom-gradient');
-            
-            body.style.backgroundColor = CONFIG.backgroundColor;
-            initialTextEl.style.color = CONFIG.initialTextColor;
-            bottomGradientEl.style.background = `linear-gradient(to top, ${CONFIG.backgroundColor}, transparent)`;
+        createMainContent();
+        mainContentEl.classList.add('main-content-fade-in');
+      }
+    }
+    requestAnimationFrame(animationLoop);
+  }
 
-            async function runAnimationSequence() {
-                const STATES = { BLINK: 0, NORMAL_1: 1, TRANSITION: 2, NORMAL_2: 3, END: 4 };
-                let currentState = STATES.BLINK;
-                let totalStartTime = performance.now();
-                let stateStartTime = performance.now();
-                let animationFrameId = null;
-                const text1Duration = CONFIG.titleTextDurations[0];
-                const text2Duration = CONFIG.titleTextDurations[1];
-                const blinkDuration = CONFIG.blinkEffect.duration;
-                const transitionDuration = CONFIG.transitionEffect.duration;
-                initialTextEl.textContent = CONFIG.initialTextContents[0];
-                function animationLoop(timestamp) {
-                    const totalElapsed = timestamp - totalStartTime;
-                    const stateElapsed = timestamp - stateStartTime;
-                    let vibX = 0, vibY = 0, transVibX = 0, transVibY = 0, preVibX = 0, preVibY = 0, scale = 0, opacity = 1;
-                    switch (currentState) {
-                        case STATES.BLINK:
-                            if (stateElapsed > blinkDuration) {
-                                currentState = STATES.NORMAL_1;
-                                stateStartTime = timestamp;
-                            }
-                            break;
-                        case STATES.NORMAL_1:
-                            if (stateElapsed > text1Duration - blinkDuration) {
-                                currentState = STATES.TRANSITION;
-                                stateStartTime = timestamp;
-                            }
-                            break;
-                        case STATES.TRANSITION:
-                            if (stateElapsed > transitionDuration) {
-                                currentState = STATES.NORMAL_2;
-                                stateStartTime = timestamp;
-                            }
-                            break;
-                        case STATES.NORMAL_2:
-                            if (stateElapsed > text2Duration) {
-                                currentState = STATES.END;
-                            }
-                            break;
-                    }
-                    const scalingProgress = Math.min(totalElapsed / (text1Duration + transitionDuration + text2Duration), 1);
-                    scale = CONFIG.initialTextInitialSize + (CONFIG.initialTextGrowthRate * scalingProgress);
-                    
-                    const amp = CONFIG.initialTextAmplitude;
-                    vibX = (Math.random() - 0.5) * 2 * amp;
-                    vibY = (Math.random() - 0.5) * 2 * amp;
-                    switch (currentState) {
-                        case STATES.BLINK:
-                            const blinkInterval = 1000 / CONFIG.blinkEffect.frequency;
-                            opacity = Math.floor(stateElapsed / blinkInterval) % 2 === 0 ? 0 : 1;
-                            break;
-                        
-                        case STATES.NORMAL_1:
-                            const preVibeDuration = CONFIG.preFadeoutVibration.duration;
-                            if (stateElapsed > (text1Duration - blinkDuration) - preVibeDuration) {
-                                const vibeAmp = CONFIG.preFadeoutVibration.amplitude;
-                                preVibX = (Math.random() - 0.5) * 2 * vibeAmp.x;
-                                preVibY = (Math.random() - 0.5) * 2 * vibeAmp.y;
-                            }
-                            break;
-                        case STATES.TRANSITION:
-                            if (stateElapsed > transitionDuration / 2) {
-                                initialTextEl.textContent = CONFIG.initialTextContents[1];
-                            }
-                            const transAmp = CONFIG.transitionEffect.amplitude;
-                            transVibX = (Math.random() - 0.5) * 2 * transAmp.x;
-                            transVibY = (Math.random() - 0.5) * 2 * transAmp.y;
-                            break;
-                        
-                        case STATES.NORMAL_2:
-                            if (stateElapsed > text2Duration - 1000) {
-                                const dampProgress = (stateElapsed - (text2Duration - 1000)) / 1000;
-                                const dampedAmp = CONFIG.initialTextAmplitude * (1 - dampProgress);
-                                vibX = (Math.random() - 0.5) * 2 * dampedAmp;
-                                vibY = (Math.random() - 0.5) * 2 * dampedAmp;
-                            }
-                            break;
-                    }
-                    
-                    initialTextEl.style.opacity = opacity;
-                    initialTextEl.style.transform = `translate(${vibX + transVibX + preVibX}px, ${vibY + transVibY + preVibY}px) scale(${scale})`;
-                    if (currentState !== STATES.END) {
-                        animationFrameId = requestAnimationFrame(animationLoop);
-                    } else {
-                        const initialCenterY = window.innerHeight / 2;
-                        const finalTopPadding = 32;
-                        const finalHeight = initialTextEl.offsetHeight * 0.5;
-                        const finalCenterY = finalTopPadding + (finalHeight / 2);
-                        const translationY = finalCenterY - initialCenterY;
-                        initialTextEl.style.setProperty('--final-y', `${translationY}px`);
-                        initialTextEl.style.animationDuration = `${CONFIG.initialTextMoveDuration}ms`;
-                        initialTextEl.classList.add('animate-shrink-move-up');
-                        setTimeout(() => {
-                            initialTextContainer.style.pointerEvents = 'none';
-                        }, CONFIG.initialTextMoveDuration);
-                        createMainContent();
-                        mainContentEl.classList.add('main-content-fade-in');
-                    }
-                }
-                
-                animationFrameId = requestAnimationFrame(animationLoop);
-            }
-            
-            function createMainContent() {
-                const container = document.getElementById('grid-container');
-                container.innerHTML = '';
-                CONFIG.gridCharacters.forEach((gridData, index) => {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'flex items-center space-x-8 pl-8'; 
-                    const gridElement = document.createElement('div');
-                    gridElement.className = 'grid shrink-0';
-                    gridElement.style.gridTemplateColumns = 'repeat(5, 1fr)';
-                    gridElement.style.border = `${CONFIG.gridBorderWidth} solid ${CONFIG.gridBorderColor}`;
-                    gridElement.style.width = '146px';
-                    gridElement.style.height = '146px';
-                    gridData.flat().forEach(char => {
-                        const cell = document.createElement('div');
-                        cell.className = 'grid-cell flex items-center justify-center text-lg cursor-pointer transition-colors duration-200';
-                        cell.textContent = char;
-                        cell.style.border = `${CONFIG.gridBorderWidth} solid ${CONFIG.gridBorderColor}`;
-                        cell.style.backgroundColor = CONFIG.gridCellColorInitial;
-                        cell.style.color = CONFIG.gridTextColorInitial;
-                        cell.dataset.toggled = 'false';
-                        gridElement.appendChild(cell);
-                    });
-                    
-                    const iconBoxContainer = document.createElement('div');
-                    iconBoxContainer.className = 'flex flex-wrap';
-                    iconBoxContainer.style.gap = CONFIG.iconBox.gap;
-                    iconBoxContainer.style.width = CONFIG.iconBox.containerWidth;
-                    
-                    const boxSet = CONFIG.iconBoxSets[index] || [];
-                    boxSet.forEach(boxData => {
-                        const box = document.createElement('div');
-                        box.className = 'flex flex-col items-center justify-center rounded-md';
-                        box.style.width = CONFIG.iconBox.boxSize.width;
-                        box.style.height = CONFIG.iconBox.boxSize.height;
-                        const icon = document.createElement('img');
-                        icon.src = boxData.iconUrl;
-                        icon.style.width = CONFIG.iconBox.iconSize;
-                        icon.style.height = CONFIG.iconBox.iconSize;
-                        icon.style.marginBottom = '4px';
-                        icon.onerror = () => { icon.src = `https://placehold.co/${CONFIG.iconBox.iconSize.replace('px','')}?text=?`; };
-                        const text = document.createElement('span');
-                        text.textContent = boxData.text;
-                        text.style.fontSize = CONFIG.iconBox.textSize;
-                        text.style.color = CONFIG.iconBox.textColor;
-                        box.appendChild(icon);
-                        box.appendChild(text);
-                        iconBoxContainer.appendChild(box);
-                    });
-                    wrapper.appendChild(gridElement);
-                    wrapper.appendChild(iconBoxContainer);
-                    container.appendChild(wrapper);
-                });
-                container.addEventListener('click', (event) => {
-                    const cell = event.target.closest('.grid-cell');
-                    if (!cell) return;
-                    const isToggled = cell.dataset.toggled === 'true';
-                    if (isToggled) {
-                        cell.style.backgroundColor = CONFIG.gridCellColorInitial;
-                        cell.style.color = CONFIG.gridTextColorInitial;
-                        cell.dataset.toggled = 'false';
-                    } else {
-                        cell.style.backgroundColor = CONFIG.gridCellColorToggled;
-                        cell.style.color = CONFIG.gridTextColorToggled;
-                        cell.dataset.toggled = 'true';
-                    }
-                });
-            }
-            // 変更点: フォントの読み込みが完了するのを待ってからアニメーションを開始する
-            await document.fonts.ready;
-            runAnimationSequence();
-        });
-    </script>
+  updateAllEffects();
+  await document.fonts.ready;
+  runAnimationSequence();
+
+  window.addEventListener('resize', () => { if (CONFIG.effects.noise.enabled) resizeNoiseCanvas(); });
+  window.addEventListener('keydown', (e) => {
+    const keyMap = {c:'chroma',n:'noise',v:'vignette',h:'glow'};
+    if (keyMap[e.key.toLowerCase()]) {
+        CONFIG.effects[keyMap[e.key.toLowerCase()]].enabled = !CONFIG.effects[keyMap[e.key.toLowerCase()]].enabled;
+        updateAllEffects();
+    }
+  });
+
+});
+</script>
 </body>
 </html>
