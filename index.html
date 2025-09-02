@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>最終問題 — 色収差改善版</title>
+<title>最終問題</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
@@ -88,7 +88,7 @@ main#main-content { z-index: 10; position: relative; }
 <script>
 /* ========== CONFIG（内部変数） ========== */
 const CONFIG = {
-  backgroundColor: '#1f2224',
+  backgroundColor: '#191b1f',
 
   initialTextAmplitude: 0.4,
   initialTextInitialSize: 0.5,
@@ -103,6 +103,8 @@ const CONFIG = {
   gridTextColorInitial: '#ffffff',
   gridCellColorToggled: '#dddddd',
   gridTextColorToggled: '#000000',
+  // 修正点: グリッドの文字サイズをCONFIGで管理
+  gridCellTextSize: '14px',
   gridCharacters: [
     [['け','み','き','や','こ'],['と','し','よ','か','ん'],['ぬ','そ','う','り','た'],['ら','い','と','ん','ぼ'],['み','え','ふ','く','り']],
     [['さ','さ','た','ろ','う'],['そ','ぬ','ひ','ま','で'],['す','い','か','ー','ど'],['か','せ','ち','り','け'],['す','べ','り','だ','い']],
@@ -128,7 +130,7 @@ const CONFIG = {
   ],
 
   effects: {
-    mobileDisableByDefault: true,
+    mobileDisableByDefault: false,
     vignette: { enabled:true, opacity:0.3, sizePct:40 },
     chroma: {
       enabled: true,
@@ -137,7 +139,7 @@ const CONFIG = {
       opacity: 1,
     },
     glow: { enabled:true, color:'#ffffff', blurPx:64, intensity:0.8 },
-    noise: { enabled:true, opacity:0.1, strength:1.0, lowResFactor:0.25, animated:true, fpsLimit:10 },
+    noise: { enabled:true, opacity:0.08, strength:1.0, lowResFactor:0.25, animated:true, fpsLimit:15 },
   }
 };
 
@@ -244,9 +246,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       gridElement.style.cssText = `grid-template-columns:repeat(5,1fr); border:${CONFIG.gridBorderWidth} solid ${CONFIG.gridBorderColor}; width:146px; height:146px;`;
       gridData.flat().forEach(char => {
         const cell = document.createElement('div');
-        cell.className = 'grid-cell flex items-center justify-center text-lg cursor-pointer transition-colors duration-200';
+        cell.className = 'grid-cell flex items-center justify-center cursor-pointer transition-colors duration-200';
         cell.textContent = char;
-        cell.style.cssText = `border:${CONFIG.gridBorderWidth} solid ${CONFIG.gridBorderColor}; background-color:${CONFIG.gridCellColorInitial}; color:${CONFIG.gridTextColorInitial};`;
+        cell.style.cssText = `border:${CONFIG.gridBorderWidth} solid ${CONFIG.gridBorderColor}; background-color:${CONFIG.gridCellColorInitial}; color:${CONFIG.gridTextColorInitial}; font-size:${CONFIG.gridCellTextSize};`;
         cell.dataset.toggled = 'false';
         gridElement.appendChild(cell);
       });
