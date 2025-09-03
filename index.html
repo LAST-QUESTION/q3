@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>最終問題 — 色収差改善版</title>
+<title>最終問題</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
@@ -88,7 +88,7 @@ main#main-content { z-index: 10; position: relative; }
 <script>
 /* ========== CONFIG（内部変数） ========== */
 const CONFIG = {
-  backgroundColor: '#191b1f',
+  backgroundColor: '#131519',
 
   initialTextAmplitude: 0.42,
   initialTextInitialSize: 0.5,
@@ -131,7 +131,7 @@ const CONFIG = {
 
   effects: {
     mobileDisableByDefault: true,
-    vignette: { enabled:true, opacity:0.3, sizePct:40 },
+    vignette: { enabled:true, opacity:0.4, sizePct:40 },
     chroma: {
       enabled: true,
       offsetPx: 1,
@@ -395,4 +395,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 </script>
 </body>
 </html>
+
 
