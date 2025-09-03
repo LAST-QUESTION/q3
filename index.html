@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>最終問題</title>
+<title>最終問題 — 色収差改善版</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
@@ -94,16 +94,15 @@ const CONFIG = {
   initialTextInitialSize: 0.5,
   initialTextGrowthRate: 0.1,
   initialTextMoveDuration: 1000,
-  titleTextDurations: [3500,1500],
-  initialTextContents: ["（ストーリー的な内容をここに入力）","謎3: 最終問題「」"],
+  titleTextDurations: [2000,1500],
+  initialTextContents: ["最終問題","謎3: 「隠された場所」"],
 
-  gridBorderWidth: '0.6px',
-  gridBorderColor: '#6c6f75',
-  gridCellColorInitial: '#202224',
+  gridBorderWidth: '0.75px',
+  gridBorderColor: '#666666',
+  gridCellColorInitial: '#202024',
   gridTextColorInitial: '#ffffff',
-  gridCellColorToggled: '#dbddde',
+  gridCellColorToggled: '#dddddd',
   gridTextColorToggled: '#000000',
-  // 修正点: グリッドの文字サイズをCONFIGで管理
   gridCellTextSize: '14px',
   gridCharacters: [
     [['け','み','き','や','こ'],['と','し','よ','か','ん'],['ぬ','そ','う','り','た'],['ら','い','と','ん','ぼ'],['み','え','ふ','く','り']],
@@ -114,7 +113,8 @@ const CONFIG = {
   ],
 
   iconBox: {
-    containerWidth: '540px',
+    // 修正点: containerWidthを動的な計算式に変更
+    containerWidth: 'calc(100vw - 148px)',
     boxSize: { width:'54px', height:'60px' },
     gap: '4px',
     iconSize: '46px',
@@ -130,7 +130,7 @@ const CONFIG = {
   ],
 
   effects: {
-    mobileDisableByDefault: false,
+    mobileDisableByDefault: true,
     vignette: { enabled:true, opacity:0.3, sizePct:40 },
     chroma: {
       enabled: true,
@@ -138,7 +138,7 @@ const CONFIG = {
       angleDeg: 0,
       opacity: 1,
     },
-    glow: { enabled:true, color:'#ffffff', blurPx:64, intensity:1 },
+    glow: { enabled:true, color:'#ffffff', blurPx:36, intensity:1 },
     noise: { enabled:true, opacity:0.08, strength:1.0, lowResFactor:0.25, animated:true, fpsLimit:15 },
   }
 };
