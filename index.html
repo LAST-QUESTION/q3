@@ -2,12 +2,12 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale-1" />
 <title>最終問題</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c&family=Noto+Serif+JP&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c&family=Noto+Serif+JP:wght@300;400&display=swap" rel="stylesheet">
 <style>
 :root{
   --vignette-opacity: 0.45;
@@ -79,6 +79,12 @@ main#main-content { z-index: 10; position: relative; }
   </div>
 
   <main id="main-content" class="w-full h-screen pt-28 flex justify-center opacity-0 relative">
+    <!-- ▼ 修正: インラインのtopスタイルを削除 -->
+    <div id="hint-text-container" class="absolute left-1/2 -translate-x-1/2 w-full max-w-4xl px-4 text-center pointer-events-none">
+      <p id="hint-text" style="opacity: 0; transition: opacity 1.2s ease-out; font-family: 'Noto Serif JP', serif; font-weight: 300;"></p>
+    </div>
+    <!-- ▲ 修正ここまで -->
+
     <div id="scroll-wrapper">
       <div id="grid-container" class="w-full max-w-4xl mx-auto flex flex-col space-y-4"></div>
     </div>
@@ -97,6 +103,14 @@ const CONFIG = {
   titleTextDurations: [2500,1500],
   initialTextContents: ["最終問題","謎3: 「犯人の手がかり」"],
 
+  hintText: {
+    enabled: true,
+    content: "Hint: マス目の文字を押すと色を変えることができる",
+    fontSize: '10px',
+    color: '#cccecf',
+    topPosition: '66px' // 上からの位置を指定（単位も含む）
+  },
+
   gridBorderWidth: '0.75px',
   gridBorderColor: '#666666',
   gridCellColorInitial: '#202024',
@@ -106,14 +120,13 @@ const CONFIG = {
   gridCellTextSize: '14px',
   gridCharacters: [
     [['け','み','き','や','こ'],['と','し','よ','か','ん'],['ぬ','そ','う','り','た'],['ら','い','と','ん','ぼ'],['み','え','ふ','く','り']],
-    [['さ','さ','た','ろ','う'],['そ','ぬ','ひ','ま','で'],['す','い','か','ー','ど'],['か','せ','ち','り','け'],['す','べ','り','だ','い']],
+    [['さ','さ','た','ろ','う'],['そ','ぬ','ひ','ま','で'],['す','い','か','ー','ど'],['か','せ','ち','り','ке'],['す','べ','り','だ','い']],
     [['ら','ふ','お','ほ','け'],['こ','い','の','ぼ','り'],['ま','よ','な','ち','ん'],['も','さ','ふ','け','ご'],['れ','や','ほ','し','い']],
     [['よ','み','か','づ','き'],['や','せ','こ','ら','ゆ'],['て','ん','た','こ','う'],['す','ま','く','に','り'],['し','ふ','い','か','と']],
     [['ら','か','み','な','り'],['せ','ね','ま','く','も'],['き','よ','な','る','こ'],['れ','み','ぐ','て','ん'],['か','や','く','ち','ほ']]
   ],
 
   iconBox: {
-    // 修正点: containerWidthを動的な計算式に変更
     containerWidth: 'calc(100vw - 148px)',
     boxSize: { width:'54px', height:'60px' },
     gap: '4px',
@@ -156,6 +169,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const vignetteEl = document.getElementById('vignette');
   const noiseCanvas = document.getElementById('noise-canvas');
   const initialTextContainer = document.getElementById('initial-text-container');
+  const hintContainerEl = document.getElementById('hint-text-container');
+  const hintTextEl = document.getElementById('hint-text');
 
   const glowEl = document.getElementById('text-glow');
   const redEl = document.getElementById('text-red');
@@ -357,6 +372,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         mainAnim.onfinish = () => {
           initialTextContainer.style.pointerEvents = 'none';
+
+          // ▼ 修正: ヒントテキストのフェードイン処理（topPositionも適用）
+          if (CONFIG.hintText && CONFIG.hintText.enabled) {
+            hintContainerEl.style.top = CONFIG.hintText.topPosition || '80px'; // topPositionを適用
+            
+            hintTextEl.textContent = CONFIG.hintText.content || '';
+            hintTextEl.style.fontSize = CONFIG.hintText.fontSize || '15px';
+            hintTextEl.style.color = CONFIG.hintText.color || '#cccccc';
+            
+            setTimeout(() => {
+              hintTextEl.style.opacity = '1';
+            }, 500);
+          }
+          // ▲ 修正ここまで
         };
 
         glowEl.animate([{ transform: mainTargetTransform }], finalMoveOptions);
@@ -395,6 +424,3 @@ document.addEventListener('DOMContentLoaded', async () => {
 </script>
 </body>
 </html>
-
-
-
